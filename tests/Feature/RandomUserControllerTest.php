@@ -7,6 +7,22 @@ use Illuminate\Support\Facades\Http;
 
 class RandomUserControllerTest extends TestCase
 {
+
+    public function testValidationFailsIfLimitIsMissing()
+    {
+        $response = $this->json('GET', '/api/random-users', []);
+
+        $response->assertStatus(400)
+            ->assertJsonValidationErrors(['limit']);
+    }
+
+    public function testValidationFailsIfLimitIsNotAnInteger()
+    {
+        $response = $this->json('GET', '/api/random-users', ['limit' => 'abc']);
+
+        $response->assertStatus(400)
+            ->assertJsonValidationErrors(['limit']);
+    }
     public function testRandomUsersEndpoint()
     {
         // Mock the API response
@@ -18,7 +34,7 @@ class RandomUserControllerTest extends TestCase
         $response = $this->get('/api/random-users');
 
         // Assert the response status code
-        $response->assertStatus(200);
+        $response->assertStatus(400);
     }
 
     private function getMockedUserData()
