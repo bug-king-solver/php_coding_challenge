@@ -1,37 +1,77 @@
 version: '3'
+
 services:
-  web:
-    image: nginx:alpine  # Use Nginx as the web server or choose your preferred web server image
-    ports:
-      - "80:80"
-    volumes:
-      - ./app:/var/www/html  # Map your Laravel project code to the web server container
-    networks:
-      - laravel-net
-  php:
-    image: php:8.1-fpm  # Use the PHP-FPM image with the desired PHP version
-    volumes:
-      - ./app:/var/www/html
-    networks:
-      - laravel-net
-  db:
-    image: mysql:8.0  # Use the MySQL image or another database image you prefer
-    environment:
-      MYSQL_ROOT_PASSWORD: yourpassword
-      MYSQL_DATABASE: laravel_db
-    volumes:
-      - laravel-db-data:/var/lib/mysql
-    networks:
-      - laravel-net
-  redis:
-    image: redis:latest  # Optional: Add a Redis container if your project uses Redis
-    networks:
-      - laravel-net
-  # Add other containers if needed (e.g., Redis, Redis, etc.)
 
-networks:
-  laravel-net:
-    driver: bridge
+    ####################################################################################################
+    # PHP
+    ####################################################################################################
+    php:
+        container_name: laravel_php
+        build: .docker/php
+        ports:
+            - 5173:5173
+        volumes:
+            - .:/var/www:cached
 
-volumes:
-  laravel-db-data:
+    ####################################################################################################
+    # Nginx
+    ####################################################################################################
+    nginx:
+        container_name: laravel_nginx
+        image: nginx
+        ports:
+            - 80:80
+        volumes:
+            - .:/var/www
+            - .docker/nginx/default.conf:/etc/nginx/conf.d/default.conf
+            - .docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+        depends_on:
+            - php
+
+    ####################################################################################################
+    # DATABASE (MySQL)
+    ####################################################################################################
+    db:
+        container_name: laravel_mysql
+        image: mysql:8.1
+        ports:
+            - 3306:3306
+        volumes:
+            - .docker/db/data:/var/lib/mysql
+            - .docker/logs:/var/log/mysql
+            - .docker/db/my.cnf:/etc/mysql/conf.d/my.cnf
+            - .docker/db/sql:/docker-entrypoint-initdb.d
+        environment:
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_DATABASE: laravel_db_name
+            MYSQL_USER: laravel_db_user
+            MYSQL_PASSWORD: laravel_db_pass
+
+    # ####################################################################################################
+    # # DATABASE (MariaDB)
+    # ####################################################################################################
+    # db:
+    #     container_name: laravel_mariadb
+    #     image: mariadb:10.11
+    #     ports:
+    #         - 3306:3306
+    #     volumes:
+    #         - .docker/db/data:/var/lib/mysql
+    #         - .docker/logs:/var/log/mysql
+    #         - .docker/db/my.cnf:/etc/mysql/conf.d/my.cnf
+    #         - .docker/db/sql:/docker-entrypoint-initdb.d
+    #     environment:
+    #         MYSQL_ROOT_PASSWORD: root
+    #         MYSQL_DATABASE: laravel_db_name
+    #         MYSQL_USER: laravel_db_user
+    #         MYSQL_PASSWORD: laravel_db_pass
+
+    ####################################################################################################
+    # Mailpit
+    ####################################################################################################
+    mail:
+        container_name: laravel_mailpit
+        image: axllent/mailpit:latest
+        ports:
+        - 8025:8025
+        - 1025:1025
