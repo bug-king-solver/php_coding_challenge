@@ -12,18 +12,29 @@ class RandomUserController extends Controller
 {
     public function index(Request $request)
     {
-        // Validate the incoming request
-        $validator = Validator::make($request->all(), [
-            'limit' => 'nullable|integer|min:1|max:100',
-        ]);
-        // If validation fails, return a custom error response
+        // Validation rules
+        $rules = [
+            'limit' => 'required|integer|min:1|max:100',
+            // Adjust the min and max values as needed
+        ];
+
+        // Custom error messages (optional)
+        $messages = [
+            'limit.required' => 'The limit field is required.',
+            'limit.integer' => 'The limit field must be an integer.',
+            'limit.min' => 'The limit field must be at least :min.',
+            'limit.max' => 'The limit field may not be greater than :max.',
+        ];
+
+        // Validate the request data
+        $validator = Validator::make($request->all(), $rules, $messages);
+
+        // Check if validation fails
         if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed',
-                'errors' => $request->errors(),
-            ], 422);
+            return response()->json(['errors' => $validator->errors()], 400);
         }
 
+        // Your existing code
         $limit = $request->limit;
 
         $response = Cache::remember("random_users_limit_$limit", 3600, function () use ($limit) {
