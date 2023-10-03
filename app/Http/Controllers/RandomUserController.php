@@ -6,15 +6,30 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Validator;
 
 class RandomUserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $response = Cache::remember('random_users', 3600, function () {
-            // Make 10 requests to the randomuser.me API
+        // Validate the incoming request
+        $validator = Validator::make($request->all(), [
+            'limit' => 'nullable|integer|min:1|max:100',
+        ]);
+        // If validation fails, return a custom error response
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $request->errors(),
+            ], 422);
+        }
+
+        $limit = $request->limit;
+
+        $response = Cache::remember("random_users_limit_$limit", 3600, function () use ($limit) {
+            // Make requests to the randomuser.me API with the specified limit
             $users = [];
-            for ($i = 0; $i < 10; $i++) {
+            for ($i = 0; $i < $limit; $i++) {
                 $apiResponse = Http::get('https://randomuser.me/api/');
                 $userData = $apiResponse->json()['results'][0];
                 $users[] = [
@@ -33,10 +48,13 @@ class RandomUserController extends Controller
             return $users;
         });
 
+        // Convert the sorted user data to XML
         $xml = $this->arrayToXml($response);
-        return Response::make($xml, '200')
+
+        return Response::make($xml, 200)
             ->header('Content-Type', 'application/xml');
     }
+
     private function arrayToXml($data, $rootNodeName = 'data', $xml = null)
     {
         if ($xml === null) {
