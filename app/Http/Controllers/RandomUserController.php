@@ -33,8 +33,24 @@ class RandomUserController extends Controller
             return $users;
         });
 
-        return response()->json($response);
-
+        $xml = $this->arrayToXml($response);
+        return Response::make($xml, '200')
+            ->header('Content-Type', 'application/xml');
     }
+    private function arrayToXml($data, $rootNodeName = 'data', $xml = null)
+    {
+        if ($xml === null) {
+            $xml = new \SimpleXMLElement('<' . $rootNodeName . '/>');
+        }
 
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                $this->arrayToXml($value, $key, $xml->addChild($key));
+            } else {
+                $xml->addChild($key, htmlspecialchars($value));
+            }
+        }
+
+        return $xml->asXML();
+    }
 }
